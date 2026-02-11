@@ -999,6 +999,7 @@ static int neumo_dvb_demux_open(struct inode *inode, struct file *file)
 	dvb_vb2_init(&dmxdevfilter->vb2_ctx, "demux_filter",
 		     file->f_flags & O_NONBLOCK);
 	dmxdevfilter->type = DMXDEV_TYPE_NONE;
+	INIT_LIST_HEAD(&dmxdevfilter->feed.dmxdev_feed_list);
 	neumo_dvb_dmxdev_filter_state_set(dmxdevfilter, DMXDEV_STATE_ALLOCATED);
 	timer_setup(&dmxdevfilter->timer, dvb_dmxdev_filter_timeout, 0);
 
@@ -1077,8 +1078,10 @@ static int dvb_dmxdev_add_pid(struct neumo_dmxdev *dmxdev,
 	dmxdev_pid_feed_dprintk(dmxdev,
 													pid_feed, "Adding pid=%d next.next=%p filter->feed.dmxdev_feed_list->next.next=%p\n",
 													pid, pid_feed->f.next.next, filter->feed.dmxdev_feed_list.next);
-	if(!filter->feed.dmxdev_feed_list.next)
-		return -1;
+	if(!filter->feed.dmxdev_feed_list.next) {
+		kfree(pid_feed);
+		return -EINVAL;
+	}
 	list_add(&pid_feed->f.next, &filter->feed.dmxdev_feed_list);
 
 	if (filter->state >= DMXDEV_STATE_GO)
