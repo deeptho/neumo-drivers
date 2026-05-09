@@ -39,14 +39,40 @@ MODULE_PARM_DESC(dtdebug, "Turn on/off debugging (default:off).");
 						 __func__, __LINE__, ##arg);					\
 	} while (0)
 
-#define dmxdev_pid_feed_dprintk(feed, fmt, arg...) do {											\
+
+static inline int get_adapter_num(struct neumo_dmxdev* dmxdev)
+{
+
+	if(!dmxdev)
+		return -1;
+	struct dvb_device* dvbdev = dmxdev->dvbdev;
+	if(!dvbdev)
+		return -2;
+	struct dvb_adapter* adapter = dvbdev->adapter;
+	if(!adapter)
+		return -2;
+	return adapter->num;
+}
+
+#define dmxdev_dprintk(dmxdev, fmt, arg...) do {												\
 		if (dtdebug) {																											\
+		int num = get_adapter_num(dmxdev);																	\
+		printk(KERN_DEBUG pr_fmt("%s:%d demux %d dmxdev=%p " fmt),					\
+					 __func__, __LINE__, num, (void*)dmxdev,											\
+					 ##arg);																											\
+		}																																		\
+	} while (0)
+
+
+#define dmxdev_pid_feed_dprintk(dmxdev, feed, fmt, arg...) do {					\
+		if (dtdebug) {																											\
+			int num = get_adapter_num(dmxdev);																\
 			if(!feed)																													\
-				printk(KERN_DEBUG pr_fmt("%s:%d NO FEED " fmt),									\
-							 __func__, __LINE__, ##arg);															\
+				printk(KERN_DEBUG pr_fmt("%s:%d demux %d NO FEED " fmt),				\
+							 __func__, __LINE__, num, ##arg);													\
 			else																															\
-				printk(KERN_DEBUG pr_fmt("%s:%d feed[%p] pid=0x%04x " fmt),			\
-							 __func__, __LINE__, (void*)feed, feed->pid,							\
+				printk(KERN_DEBUG pr_fmt("%s:%d demux %d feed[%p] pid=0x%04x " fmt),			\
+							 __func__, __LINE__, num, (void*)feed, feed->pid,					\
 							 ##arg);																									\
 		}																																		\
 	} while (0)
@@ -141,7 +167,7 @@ static int neumo_dvb_dvr_open(struct inode *inode, struct file *file)
 	struct dmx_frontend *front;
 	bool need_ringbuffer = false;
 
-	dprintk("%s\n", __func__);
+	dmxdev_dprintk(dmxdev, "opening\n");
 
 	if (mutex_lock_interruptible(&dmxdev->mutex))
 		return -ERESTARTSYS;
@@ -304,7 +330,7 @@ static int dvb_dvr_set_buffer_size(struct neumo_dmxdev *dmxdev,
 	void *newmem;
 	void *oldmem;
 
-	dprintk("%s\n", __func__);
+	dmxdev_dprintk(dmxdev, "\n");
 
 	if (buf->size == size)
 		return 0;
@@ -514,11 +540,11 @@ static int dvb_dmxdev_feed_stop(struct neumo_dmxdev_filter *dmxdevfilter)
 			case DMXDEV_FEED_TYPE_PID: {
 				struct neumo_dmx_pid_feed * pid_feed = container_of(feed, struct neumo_dmx_pid_feed, f);
 				if(pid_feed ==NULL) {
-					dprintk("BUG: pid_feed=NULL\n");
+					dmxdev_dprintk(dmxdevfilter->dev, "BUG: pid_feed=NULL\n");
 				} else if(pid_feed->neumo_pid_stream == NULL) {
-					dprintk("BUG: pid_feed->neumo_pid_stream=NULL\n");
+					dmxdev_dprintk(dmxdevfilter->dev, "BUG: pid_feed->neumo_pid_stream=NULL\n");
 				} else {
-					dmxdev_pid_feed_dprintk(pid_feed, "calling dmx_demux->release_neumo_pid_stream\n");
+					dmxdev_pid_feed_dprintk(dmxdevfilter->dev, pid_feed, "calling dmx_demux->release_neumo_pid_stream\n");
 					pid_feed->neumo_pid_stream->stop_filtering(pid_feed->neumo_pid_stream);
 				}
 			}
@@ -556,7 +582,7 @@ static int dvb_dmxdev_feed_start(struct neumo_dmxdev_filter *filter)
 			switch(feed->feed_type) {
 			case 	DMXDEV_FEED_TYPE_UNDEFINED:
 			default:
-				dprintk("Implementation error feed_type=%d\n", feed->feed_type);
+				dmxdev_dprintk(filter->dev, "Implementation error feed_type=%d\n", feed->feed_type);
 				break;
 			case DMXDEV_FEED_TYPE_PID: {
 				struct neumo_dmx_pid_feed * pid_feed = container_of(feed, struct neumo_dmx_pid_feed, f);
@@ -569,24 +595,24 @@ static int dvb_dmxdev_feed_start(struct neumo_dmxdev_filter *filter)
 				break;
 			case DMXDEV_FEED_TYPE_STID: {
 				struct neumo_dmx_stid_stream* bbs = container_of(feed, struct neumo_dmx_stid_stream, f);
-				dprintk("Calling with dmx_bbs=%p  pid=%d isi=%d current_feeds=%p\n",
+				dmxdev_dprintk(filter->dev, "Calling with dmx_bbs=%p  pid=%d isi=%d current_feeds=%p\n",
 								bbs, bbs->embedding_pid, bbs->isi, filter->current_feeds);
 				ret = filter->dev->demux->allocate_stid_stream(filter->dev->demux, bbs,
 																											 bbs->embedding_pid, bbs->isi, filter->current_feeds);
 
-				dprintk("setting current_feeds=%p was %p ret=%d\n", bbs->feeds, filter->current_feeds, ret);
+				dmxdev_dprintk(filter->dev, "setting current_feeds=%p was %p ret=%d\n", bbs->feeds, filter->current_feeds, ret);
 				filter -> current_feeds = bbs->feeds;
 			}
 				break;
 			case DMXDEV_FEED_TYPE_T2MI:
 				{
 					struct neumo_dmx_t2mi_stream* t2mi = container_of(feed, struct neumo_dmx_t2mi_stream, f);
-					dprintk("Calling with t2mi=%p  pid=%d isi=%d current_feeds=%p\n",
-									t2mi, t2mi->embedding_pid, t2mi->isi, filter->current_feeds);
+					dmxdev_dprintk(filter->dev, "Calling with t2mi=%p  pid=%d isi=%d current_feeds=%p\n",
+												 t2mi, t2mi->embedding_pid, t2mi->isi, filter->current_feeds);
 					ret = filter->dev->demux->allocate_t2mi_stream(filter->dev->demux, t2mi,
 																												 t2mi->embedding_pid, t2mi->isi,
 																												 filter->current_feeds);
-					dprintk("setting current_feeds=%p was %p ret=%d\n", t2mi->feeds, filter->current_feeds, ret);
+					dmxdev_dprintk(filter->dev, "setting current_feeds=%p was %p ret=%d\n", t2mi->feeds, filter->current_feeds, ret);
 					filter -> current_feeds = t2mi->feeds;
 			}
 				break;
@@ -649,16 +675,16 @@ static int dvb_dmxdev_filter_stop(struct neumo_dmxdev_filter *dmxdevfilter)
 			switch(feed->feed_type) {
 			case 	DMXDEV_FEED_TYPE_UNDEFINED:
 			default:
-				dprintk("Implementation error feed_type=%d\n", feed->feed_type);
+				dmxdev_dprintk(dmxdevfilter->dev, "Implementation error feed_type=%d\n", feed->feed_type);
 				break;
 			case DMXDEV_FEED_TYPE_PID: {
 				struct neumo_dmx_pid_feed *pid_feed = container_of(feed, struct neumo_dmx_pid_feed, f);
 				if(pid_feed ==NULL) {
-					dprintk("BUG: pid_feed=NULL\n");
+					dmxdev_dprintk(dmxdevfilter->dev, "BUG: pid_feed=NULL\n");
 				} else if(pid_feed->neumo_pid_stream == NULL) {
 					dprintk("BUG: pid_feed->neumo_pid_stream=NULL\n");
 				} else {
-					dmxdev_pid_feed_dprintk(pid_feed, "calling dmx_demux->release_neumo_pid_stream\n");
+					dmxdev_pid_feed_dprintk(dmxdevfilter->dev, pid_feed, "calling dmx_demux->release_neumo_pid_stream\n");
 					dmx_demux->release_neumo_pid_stream(dmx_demux, pid_feed->neumo_pid_stream);
 				}
 				pid_feed->neumo_pid_stream = NULL;
@@ -667,22 +693,22 @@ static int dvb_dmxdev_filter_stop(struct neumo_dmxdev_filter *dmxdevfilter)
 			case DMXDEV_FEED_TYPE_STID: {
 				struct neumo_dmx_stid_stream* stid = container_of(feed, struct neumo_dmx_stid_stream, f);
 				WARN_ON(!stid);
-				dprintk("STID: before dvb_dmxdev_stop_bbframes_demux bbs=%p\n", stid->stream);
+				dmxdev_dprintk(dmxdevfilter->dev, "STID: before dvb_dmxdev_stop_bbframes_demux bbs=%p\n", stid->stream);
 				int ret = dmxdevfilter->dev->demux->release_bbf_stream(dmxdevfilter->dev->demux, stid->stream);
-				dprintk("STID: after dvb_dmxdev_stop_bbframes_demux bbs=%p ret=%d\n", stid->stream, ret);
+				dmxdev_dprintk(dmxdevfilter->dev, "STID: after dvb_dmxdev_stop_bbframes_demux bbs=%p ret=%d\n", stid->stream, ret);
 			}
 				break;
 			case DMXDEV_FEED_TYPE_T2MI: {
 				struct neumo_dmx_t2mi_stream* t2mi = container_of(feed, struct neumo_dmx_t2mi_stream, f);
 				WARN_ON(!t2mi);
-				dprintk("T2MI: before dvb_dmxdev_stop_bbframes_demux bbs=%p\n", t2mi->stream);
+				dmxdev_dprintk(dmxdevfilter->dev, "T2MI: before dvb_dmxdev_stop_bbframes_demux bbs=%p\n", t2mi->stream);
 				int ret = dmxdevfilter->dev->demux->release_bbf_stream(dmxdevfilter->dev->demux, t2mi->stream);
-				dprintk("T2MI: after dvb_dmxdev_stop_bbframes_demux bbs=%p ret=%d\n", t2mi->stream, ret);
+				dmxdev_dprintk(dmxdevfilter->dev, "T2MI: after dvb_dmxdev_stop_bbframes_demux bbs=%p ret=%d\n", t2mi->stream, ret);
 			}
 				break;
 			}
 		}
-		dprintk("Called demux->release_ts_feed\n");
+		dmxdev_dprintk(dmxdevfilter->dev, "Called demux->release_ts_feed\n");
 		break;
 	default:
 		if (dmxdevfilter->state == DMXDEV_STATE_ALLOCATED)
@@ -753,20 +779,21 @@ static int dvb_dmxdev_start_pid_feed(struct neumo_dmxdev *dmxdev,
 	else if (otype == DMX_OUT_TAP)
 		ts_type |= TS_PACKET | TS_DEMUX | TS_PAYLOAD_ONLY;
 
-	dprintk("pid_feed=%p ts=%p currentsub_demux_feed=%p\n", pid_feed, &pid_feed->neumo_pid_stream, 	filter->current_feeds);
+	dmxdev_dprintk(filter->dev, "pid_feed=%p ts=%p currentsub_demux_feed=%p\n", pid_feed,
+								 &pid_feed->neumo_pid_stream, 	filter->current_feeds);
 	ret = dmxdev->demux->allocate_neumo_pid_stream(dmxdev->demux, &pid_feed->neumo_pid_stream,
 																					 dvb_dmxdev_pid_callback,
 																					 pid_feed->pid, ts_type, ts_pes, timeout,
 																					 filter->current_feeds);
-	dprintk("done ret=%d\n", ret);
+	dmxdev_dprintk(filter->dev, "done ret=%d\n", ret);
 	if (ret < 0)
 		return ret;
 
 	neumo_pid_stream = pid_feed->neumo_pid_stream;
 	neumo_pid_stream->priv = filter;
-	dprintk("before start_filtering neumo_pid_stream=%p \n", neumo_pid_stream);
+	dmxdev_dprintk(filter->dev, "before start_filtering neumo_pid_stream=%p \n", neumo_pid_stream);
 	ret = neumo_pid_stream->start_filtering(neumo_pid_stream);
-	dprintk("done ret=%d \n", ret);
+	dmxdev_dprintk(filter->dev, "done ret=%d \n", ret);
 	if (ret < 0) {
 		dmxdev->demux->release_neumo_pid_stream(dmxdev->demux, pid_feed->neumo_pid_stream);
 		return ret;
@@ -821,14 +848,14 @@ static int dvb_dmxdev_filter_start(struct neumo_dmxdev_filter *filter)
 
 		/* if no feed found, try to allocate new one */
 		if (!*secfeed) {
-			dprintk("secfeed=%p current_feeds=%p\n", secfeed, filter->current_feeds);
+			dmxdev_dprintk(filter->dev, "secfeed=%p current_feeds=%p\n", secfeed, filter->current_feeds);
 			ret = dmxdev->demux->allocate_section_feed(dmxdev->demux,
 																								 secfeed, dvb_dmxdev_section_callback,
 																								 para->pid,
 																								 (para->flags & DMX_CHECK_CRC) ? 1 : 0,
 																								 filter->current_feeds);
 			if (ret < 0) {
-				dprintk("could not alloc feed ret=%d\n", ret);
+				dmxdev_dprintk(filter->dev, "could not alloc feed ret=%d\n", ret);
 				return ret;
 			}
 		} else {
@@ -839,7 +866,7 @@ static int dvb_dmxdev_filter_start(struct neumo_dmxdev_filter *filter)
 		if (ret < 0) {
 			dvb_dmxdev_feed_restart(filter);
 			filter->feed.sec->start_section_filtering(*secfeed);
-			dprintk("could not get filter\n");
+			dmxdev_dprintk(filter->dev, "could not get filter\n");
 			return ret;
 		}
 
@@ -868,25 +895,25 @@ static int dvb_dmxdev_filter_start(struct neumo_dmxdev_filter *filter)
 		break;
 	}
 	case DMXDEV_TYPE_PES:
-		dprintk("before starting feeds\n");
+		dmxdev_dprintk(filter->dev, "before starting feeds\n");
 		{
 			int count=0;
 			list_for_each_entry(feed, &filter->feed.dmxdev_feed_list, next) {
 				count++;
 			}
-			dprintk("list has %d entries\n", count);
+			dmxdev_dprintk(filter->dev, "list has %d entries\n", count);
 		}
 		list_for_each_entry_reverse(feed, &filter->feed.dmxdev_feed_list, next) {
 			switch(feed->feed_type) {
 			case 	DMXDEV_FEED_TYPE_UNDEFINED:
 			default:
-				dprintk("Implementation error feed_type=%d\n", feed->feed_type);
+				dmxdev_dprintk(filter->dev, "Implementation error feed_type=%d\n", feed->feed_type);
 				break;
 			case DMXDEV_FEED_TYPE_PID: {
 				struct neumo_dmx_pid_feed * pid_feed = container_of(feed, struct neumo_dmx_pid_feed, f);
-				dprintk("calling dvb_dmxdev_start_feed pid_feed=%p pid=%d\n", pid_feed, pid_feed->pid);
+				dmxdev_dprintk(filter->dev, "calling dvb_dmxdev_start_feed pid_feed=%p pid=%d\n", pid_feed, pid_feed->pid);
 				ret = dvb_dmxdev_start_pid_feed(dmxdev, filter, pid_feed);
-				dprintk("Done ret=%d\n", ret);
+				dmxdev_dprintk(filter->dev, "Done ret=%d\n", ret);
 				if (ret < 0) {
 					dvb_dmxdev_filter_stop(filter);
 					return ret;
@@ -895,23 +922,23 @@ static int dvb_dmxdev_filter_start(struct neumo_dmxdev_filter *filter)
 				break;
 			case DMXDEV_FEED_TYPE_STID: {
 				struct neumo_dmx_stid_stream* bbs = container_of(feed, struct neumo_dmx_stid_stream, f);
-				dprintk("Calling with bbs=%p  pid=%d isi=%d current_feeds=%p\n",
+				dmxdev_dprintk(filter->dev, "Calling with bbs=%p  pid=%d isi=%d current_feeds=%p\n",
 								bbs, bbs->embedding_pid, bbs->isi, filter->current_feeds);
 				ret = filter->dev->demux->allocate_stid_stream(filter->dev->demux, bbs,
 																											bbs->embedding_pid, bbs->isi, filter->current_feeds);
 
-				dprintk("setting current_feeds=%p was %p ret=%d\n", bbs->feeds, filter->current_feeds, ret);
+				dmxdev_dprintk(filter->dev, "setting current_feeds=%p was %p ret=%d\n", bbs->feeds, filter->current_feeds, ret);
 				filter -> current_feeds = bbs->feeds;
 			}
 				break;
 			case DMXDEV_FEED_TYPE_T2MI: {
 				struct neumo_dmx_t2mi_stream* bbs = container_of(feed, struct neumo_dmx_t2mi_stream, f);
-				dprintk("Calling with bbs=%p  pid=%d plp=%d current_feeds=%p\n",
+				dmxdev_dprintk(filter->dev, "Calling with bbs=%p  pid=%d plp=%d current_feeds=%p\n",
 								bbs, bbs->embedding_pid, bbs->isi, filter->current_feeds);
 				ret = filter->dev->demux->allocate_t2mi_stream(filter->dev->demux, bbs,
 																											 bbs->embedding_pid, bbs->isi, filter->current_feeds);
 
-				dprintk("setting current_feeds=%p was %p ret=%d\n", bbs->feeds, filter->current_feeds, ret);
+				dmxdev_dprintk(filter->dev, "setting current_feeds=%p was %p ret=%d\n", bbs->feeds, filter->current_feeds, ret);
 				filter -> current_feeds = bbs->feeds;
 			}
 				break;
@@ -956,7 +983,7 @@ static int neumo_dvb_demux_open(struct inode *inode, struct file *file)
 	dmxdevfilter = &dmxdev->filter[i];
 	//WARN_ON(dmxdevfilter->current_feeds);
 
-	dprintk("Got filter[%d]=%p\n", i, dmxdevfilter);
+	dmxdev_dprintk(dmxdevfilter->dev, "Got filter[%d]=%p\n", i, dmxdevfilter);
 	mutex_init(&dmxdevfilter->mutex);
 	file->private_data = dmxdevfilter;
 #if 0
@@ -984,16 +1011,16 @@ static int neumo_dvb_demux_open(struct inode *inode, struct file *file)
 static int dvb_dmxdev_filter_free(struct neumo_dmxdev *dmxdev,
 				  struct neumo_dmxdev_filter *dmxdevfilter)
 {
-	dprintk("start\n");
+	dmxdev_dprintk(dmxdev, "start\n");
 	mutex_lock(&dmxdev->mutex);
 	mutex_lock(&dmxdevfilter->mutex);
 	if (dvb_vb2_is_streaming(&dmxdevfilter->vb2_ctx))
 		dvb_vb2_stream_off(&dmxdevfilter->vb2_ctx);
 	dvb_vb2_release(&dmxdevfilter->vb2_ctx);
-	dprintk("before dvb_dmxdev_filter_stop(\n");
+	dmxdev_dprintk(dmxdev, "before dvb_dmxdev_filter_stop\n");
 
 	dvb_dmxdev_filter_stop(dmxdevfilter);
-	dprintk("before dvb_dmxdev_filter_reset\n");
+	dmxdev_dprintk(dmxdev, "before dvb_dmxdev_filter_reset\n");
 	dvb_dmxdev_filter_reset(dmxdevfilter, DMXDEV_STATE_ALLOCATED);
 
 	if (dmxdevfilter->buffer.data) {
@@ -1004,7 +1031,7 @@ static int dvb_dmxdev_filter_free(struct neumo_dmxdev *dmxdev,
 		spin_unlock_irq(&dmxdev->lock);
 		vfree(mem);
 	}
-	dprintk("before neumo_dvb_dmxdev_filter_state_set\n");
+	dmxdev_dprintk(dmxdev, "before neumo_dvb_dmxdev_filter_state_set\n");
 	neumo_dvb_dmxdev_filter_state_set(dmxdevfilter, DMXDEV_STATE_FREE);
 	wake_up(&dmxdevfilter->buffer.queue);
 	mutex_unlock(&dmxdevfilter->mutex);
@@ -1027,7 +1054,7 @@ static int dvb_dmxdev_add_pid(struct neumo_dmxdev *dmxdev,
 
 	if ((filter->type != DMXDEV_TYPE_PES) ||
 	    (filter->state < DMXDEV_STATE_SET_STREAM_SELECT)) {
-		dprintk("returning EINVAL: filter->type=%d filter->state= %d\n", filter->type, filter->state);
+		dmxdev_dprintk(dmxdev, "returning EINVAL: filter->type=%d filter->state= %d\n", filter->type, filter->state);
 		return -EINVAL;
 	}
 
@@ -1035,7 +1062,7 @@ static int dvb_dmxdev_add_pid(struct neumo_dmxdev *dmxdev,
 	if ((filter->params.pes.output != DMX_OUT_TSDEMUX_TAP)
 			&& (filter->params.pes.output != DMX_OUT_TS_TAP)
 			&& (!list_empty(&filter->feed.dmxdev_feed_list))) {
-		dprintk("returning EINVAL: output=%d filter->type=%d filter->state= %d\n",
+		dmxdev_dprintk(dmxdev, "returning EINVAL: output=%d filter->type=%d filter->state= %d\n",
 						filter->params.pes.output,
 						filter->type, filter->state);
 		return -EINVAL;
@@ -1047,7 +1074,8 @@ static int dvb_dmxdev_add_pid(struct neumo_dmxdev *dmxdev,
 	pid_feed->f.feed_type = DMXDEV_FEED_TYPE_PID;
 	pid_feed->pid = pid;
 	//feed->sub_demux_feed = filter->current_sub_demux_feed;
-	dmxdev_pid_feed_dprintk(pid_feed, "Adding pid=%d next.next=%p filter->feed.dmxdev_feed_list->next.next=%p\n",
+	dmxdev_pid_feed_dprintk(dmxdev,
+													pid_feed, "Adding pid=%d next.next=%p filter->feed.dmxdev_feed_list->next.next=%p\n",
 													pid, pid_feed->f.next.next, filter->feed.dmxdev_feed_list.next);
 	if(!filter->feed.dmxdev_feed_list.next)
 		return -1;
@@ -1087,7 +1115,7 @@ static int dvb_dmxdev_section_filter_set(struct neumo_dmxdev *dmxdev,
 				 struct neumo_dmxdev_filter *dmxdevfilter,
 				 struct dmx_sct_filter_params *params)
 {
-	dprintk("%s: PID=0x%04x, flags=%02x, timeout=%d\n",
+	dmxdev_dprintk(dmxdev, "%s: PID=0x%04x, flags=%02x, timeout=%d\n",
 		__func__, params->pid, params->flags, params->timeout);
 
 	dvb_dmxdev_filter_stop(dmxdevfilter);
@@ -1154,13 +1182,13 @@ static int dvb_dmxdev_add_stid_stream(struct neumo_dmxdev *dmxdev,
 {
 	int ret;
 	struct neumo_dmx_stid_stream* stid;
-	dprintk("bbframes_pid=0x%04x isi=%d\n", params->embedding_pid, params->isi);
+	dmxdev_dprintk(dmxdev, "bbframes_pid=0x%04x isi=%d\n", params->embedding_pid, params->isi);
 	stid = kzalloc(sizeof(struct neumo_dmx_stid_stream), GFP_KERNEL);
 	if (stid == NULL)
 		return -ENOMEM;
 	dmxdev_stid_stream_init(stid, params->embedding_pid, params->isi);
 	list_add(&stid->f.next, &dmxdevfilter->feed.dmxdev_feed_list);
-	dprintk("dmxdev=%p added bbframes stream pid=0x%04x isi=%d ret=%d\n",
+	dmxdev_dprintk(dmxdev, "dmxdev=%p added bbframes stream pid=0x%04x isi=%d ret=%d\n",
 					dmxdev,
 					params->embedding_pid, params->isi, ret);
 	return 0;
@@ -1173,13 +1201,13 @@ static int dvb_dmxdev_add_t2mi_stream(struct neumo_dmxdev *dmxdev,
 	int ret;
 	struct neumo_dmx_t2mi_stream* t2mi;
 
-	dprintk("t2mi_pid=0x%04x plp=%d\n", params->embedding_pid, params->plp);
+	dmxdev_dprintk(dmxdev, "t2mi_pid=0x%04x plp=%d\n", params->embedding_pid, params->plp);
 	t2mi = kzalloc(sizeof(struct neumo_dmx_t2mi_stream), GFP_KERNEL);
 	if (t2mi == NULL)
 		return -ENOMEM;
 	dmxdev_t2mi_stream_init(t2mi, params->embedding_pid, params->plp);
 	list_add(&t2mi->f.next, &dmxdevfilter->feed.dmxdev_feed_list);
-	dprintk("dmxdev=%p Added t2mi stream pid=0x%04x plp=%d ret=%d \n",
+	dmxdev_dprintk(dmxdev, "dmxdev=%p Added t2mi stream pid=0x%04x plp=%d ret=%d \n",
 					dmxdev,
 					params->embedding_pid, params->plp, ret);
 	return 0;
@@ -1254,7 +1282,7 @@ static int dvb_demux_do_ioctl(struct file *file,
 	struct neumo_dmxdev *dmxdev = dmxdevfilter ? dmxdevfilter->dev : NULL;
 	unsigned long arg = (unsigned long)parg;
 	int ret = 0;
-	dprintk("dmxdevfilter=%p dmxdev=%p\n", file->private_data, dmxdev);
+	dmxdev_dprintk(dmxdev, "dmxdevfilter=%p dmxdev=%p\n", file->private_data, dmxdev);
 
 	if (mutex_lock_interruptible(&dmxdev->mutex))
 		return -ERESTARTSYS;
@@ -1269,7 +1297,7 @@ static int dvb_demux_do_ioctl(struct file *file,
 			ret = -EINVAL;
 		else
 			ret = dvb_dmxdev_filter_start(dmxdevfilter);
-		dprintk("Done\n");
+		dmxdev_dprintk(dmxdev, "Done\n");
 		mutex_unlock(&dmxdevfilter->mutex);
 		break;
 
@@ -1289,22 +1317,22 @@ static int dvb_demux_do_ioctl(struct file *file,
 		}
 		ret = dvb_dmxdev_section_filter_set(dmxdev, dmxdevfilter, parg);
 		mutex_unlock(&dmxdevfilter->mutex);
-		dprintk("DONE: dvb_dmxdev_section_filter_set ret=%d\n", ret);
+		dmxdev_dprintk(dmxdev, "DONE: dvb_dmxdev_section_filter_set ret=%d\n", ret);
 		break;
 
 	case DMX_SET_PES_FILTER:
-		dprintk("DMX_SET_PES_FILTER\n");
+		dmxdev_dprintk(dmxdev, "DMX_SET_PES_FILTER\n");
 		if (mutex_lock_interruptible(&dmxdevfilter->mutex)) {
 			mutex_unlock(&dmxdev->mutex);
 			return -ERESTARTSYS;
 		}
 		ret = dvb_dmxdev_pes_filter_set(dmxdev, dmxdevfilter, parg);
-		dprintk("DONE: dvb_dmxdev_pes_filter_set ret=%d\n", ret);
+		dmxdev_dprintk(dmxdev, "DONE: dvb_dmxdev_pes_filter_set ret=%d\n", ret);
 		mutex_unlock(&dmxdevfilter->mutex);
 		break;
 
 	case DMX_SET_STID_STREAM:
-		dprintk("DMX_SET_STID_STREAM\n");
+		dmxdev_dprintk(dmxdev, "DMX_SET_STID_STREAM\n");
 
 		if (mutex_lock_interruptible(&dmxdevfilter->mutex)) {
 			mutex_unlock(&dmxdev->mutex);
@@ -1315,12 +1343,12 @@ static int dvb_demux_do_ioctl(struct file *file,
 			set the pes filter for the embedding pid
 		*/
 		ret = dvb_dmxdev_add_stid_stream(dmxdev, dmxdevfilter, parg);
-		dprintk("DONE: dvb_dmxdev_add_stid_stream");
+		dmxdev_dprintk(dmxdev, "DONE: dvb_dmxdev_add_stid_stream");
 		mutex_unlock(&dmxdevfilter->mutex);
 		break;
 
 	case DMX_SET_T2MI_STREAM:
-		dprintk("DMX_SET_T2MI_STREAM\n");
+		dmxdev_dprintk(dmxdev, "DMX_SET_T2MI_STREAM\n");
 
 		if (mutex_lock_interruptible(&dmxdevfilter->mutex)) {
 			mutex_unlock(&dmxdev->mutex);
@@ -1331,7 +1359,7 @@ static int dvb_demux_do_ioctl(struct file *file,
 			set the pes filter for the embedding pid
 		*/
 		ret = dvb_dmxdev_add_t2mi_stream(dmxdev, dmxdevfilter, parg);
-		dprintk("DONE: dvb_dmxdev_add_t2mi_stream");
+		dmxdev_dprintk(dmxdev, "DONE: dvb_dmxdev_add_t2mi_stream");
 		mutex_unlock(&dmxdevfilter->mutex);
 		break;
 	case DMX_SET_FE_STREAM: {
@@ -1341,7 +1369,7 @@ static int dvb_demux_do_ioctl(struct file *file,
 		}
 
 		dmxdevfilter->current_feeds = dmxdevfilter->dev->demux->get_fe_feeds(dmxdevfilter->dev->demux);
-		dprintk("Setting current_feeds=%p\n", dmxdevfilter->current_feeds);
+		dmxdev_dprintk(dmxdev, "Setting current_feeds=%p\n", dmxdevfilter->current_feeds);
 		ret = 0;
 		mutex_unlock(&dmxdevfilter->mutex);
 	}
@@ -1510,26 +1538,26 @@ static int neumo_dvb_demux_release(struct inode *inode, struct file *file)
 {
 	struct neumo_dmxdev_filter *dmxdevfilter = file->private_data;
 	if(!dmxdevfilter) {
-		dprintk("ERROR inode=%p file=%p dmxdevfilter=%p\n", inode, file, dmxdevfilter);
+		dmxdev_dprintk(dmxdevfilter->dev, "ERROR inode=%p file=%p dmxdevfilter=%p\n", inode, file, dmxdevfilter);
 		return -1;
 	}
 	struct neumo_dmxdev *dmxdev = dmxdevfilter->dev;
 	if(!dmxdev) {
-		dprintk("ERROR inode=%p file=%p dmxdv=%p dmxdevfilter=%p\n", inode, file, dmxdev, dmxdevfilter);
+		dmxdev_dprintk(dmxdevfilter->dev, "ERROR inode=%p file=%p dmxdv=%p dmxdevfilter=%p\n", inode, file, dmxdev, dmxdevfilter);
 		return -1;
 	}
 	int ret;
-	dprintk("inode=%p file=%p dmxdev=%p dmxdevfilter=%p\n", inode, file, dmxdev, dmxdevfilter);
+	dmxdev_dprintk(dmxdev, "inode=%p file=%p dmxdev=%p dmxdevfilter=%p\n", inode, file, dmxdev, dmxdevfilter);
 	ret = dvb_dmxdev_filter_free(dmxdev, dmxdevfilter);
 	mutex_lock(&dmxdev->mutex);
-	dprintk("Here num_users=%d\n", dmxdev->dvbdev->users);
+	dmxdev_dprintk(dmxdev, "Here num_users=%d\n", dmxdev->dvbdev->users);
 	dmxdev->dvbdev->users--;
 	if (dmxdev->dvbdev->users == 1 && dmxdev->exit == 1) {
 		mutex_unlock(&dmxdev->mutex);
 		wake_up(&dmxdev->dvbdev->wait_queue);
 	} else
 		mutex_unlock(&dmxdev->mutex);
-	dprintk("success: inode=%p file=%p dmxdev=%p dmxdevfilter=%p\n", inode, file, dmxdev, dmxdevfilter);
+	dmxdev_dprintk(dmxdev, "success: inode=%p file=%p dmxdev=%p dmxdevfilter=%p\n", inode, file, dmxdev, dmxdevfilter);
 	return ret;
 }
 
@@ -1620,11 +1648,11 @@ static __poll_t neumo_dvb_dvr_poll(struct file *file, poll_table *wait)
 	poll_wait(file, &dmxdev->dvr_buffer.queue, wait);
 
 	if (dmxdev->exit) {
-		dprintk("returning EPOLLERR\n");
+		dmxdev_dprintk(dmxdev, "returning EPOLLERR\n");
 		return EPOLLERR;
 	}
 	if (dvb_vb2_is_streaming(&dmxdev->dvr_vb2_ctx)) {
-		dprintk("returning dvb_vb2_poll\n");
+		dmxdev_dprintk(dmxdev, "returning dvb_vb2_poll\n");
 		return dvb_vb2_poll(&dmxdev->dvr_vb2_ctx, file, wait);
 	}
 
@@ -1687,10 +1715,9 @@ static const struct dvb_device neumo_dvbdev_dvr = {
 	.fops = &dvb_dvr_fops
 };
 
-int neumo_dvb_dmxdev_init(struct neumo_dmxdev *dmxdev, struct dvb_adapter *dvb_adapter)
+int neumo_dvb_dmxdev_init(struct neumo_dmxdev* dmxdev, struct dvb_adapter* dvb_adapter)
 {
 	int i, ret;
-	dprintk("Called\n");
 	if (dmxdev->demux->open(dmxdev->demux) < 0)
 		return -EUSERS;
 
@@ -1734,7 +1761,6 @@ EXPORT_SYMBOL(neumo_dvb_dmxdev_init);
 
 void neumo_dvb_dmxdev_release(struct neumo_dmxdev *dmxdev)
 {
-	dprintk("Called\n");
 	mutex_lock(&dmxdev->mutex);
 	dmxdev->exit = 1;
 	mutex_unlock(&dmxdev->mutex);

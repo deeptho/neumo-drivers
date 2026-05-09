@@ -1183,7 +1183,7 @@ static inline bool get_t2mi_bbheader(struct t2mi_stream* t2mi, const uint8_t** p
 
 /*
 	Get the 9-byte t2mi_bbf header and the associated bbframe header
-	In t2mi, excatly one bbframe header is included per t2mi packet and it is immediately
+	In t2mi, exactly one bbframe header is included per t2mi packet and it is immediately
 	after the packet header
 	returns true if this is the start of a bbframe
  */
@@ -2429,13 +2429,13 @@ static int dvbdmx_release_neumo_pid_stream(struct neumo_dmx_demux *dmx, struct n
 	dmx_demux_dprintk(dmx, "release dmx dvb_demux=%p feed=%p section_filter=%p\n",
 										demux, feed, feed->section_filter);
 	mutex_lock(&demux->mutex);
-	dprintk("here pid_feed=%p feed=%p parent_feeds=%p", pid_feed, feed, feeds);
+	dprintk("pid_feed=%p feed=%p parent_feeds=%p", pid_feed, feed, feeds);
 	if (feed->state == DMX_STATE_FREE) {
 		mutex_unlock(&demux->mutex);
 		dprintk("here pid_feed=%p feed=%p parent_feeds=%p", pid_feed, feed, feeds);
 		return -EINVAL;
 	}
-	dprintk("here pid_feed=%p feed=%p parent_feeds=%p\n", pid_feed, feed, feeds);
+	dprintk("pid_feed=%p feed=%p parent_feeds=%p\n", pid_feed, feed, feeds);
 	feed->state = DMX_STATE_FREE;
 	if(feed->section_filter)
 		feed->section_filter->state = DMX_STATE_FREE;
