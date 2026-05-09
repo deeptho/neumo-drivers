@@ -1118,7 +1118,6 @@ static char *dtv_cmds[DTV_MAX_COMMAND + 1] = {
 	_DTV_CMD(DTV_ISDBT_LAYERC_TIME_INTERLEAVING),
 
 	_DTV_CMD(DTV_STREAM_ID),
-	_DTV_CMD(DTV_DVBT2_PLP_ID_LEGACY),
 	_DTV_CMD(DTV_SCRAMBLING_SEQUENCE_INDEX),
 	_DTV_CMD(DTV_LNA),
 
@@ -1726,7 +1725,6 @@ static int dvbuapi_dtv_property_process_get(struct dvb_frontend *fe,
 
 	/* Multistream support */
 	case DTV_STREAM_ID:
-	case DTV_DVBT2_PLP_ID_LEGACY:
 		tvp->u.data = c->stream_id;
 		break;
 
@@ -2254,7 +2252,6 @@ static int dtv_property_process_set_int(struct dvb_frontend *fe,
 
 	/* Multistream support */
 	case DTV_STREAM_ID:
-	case DTV_DVBT2_PLP_ID_LEGACY:
 		c->stream_id = data;
 		break;
 

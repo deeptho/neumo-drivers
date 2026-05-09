@@ -1319,11 +1319,15 @@ static int stid135_set_parameters(struct neumo_dvb_frontend* fe)
 				There could be reasons why  fe_stid135_reset_modcodes_filter is still needed, e.g., when  too strict filters
 				are left from an earlier tune?
 		*/
+		state_dprintk("resetting modcodes_filter\n");
+		state->modcode_filter = false;
 		err |= fe_stid135_reset_modcodes_filter(state);
 		if (err != FE_LLA_NO_ERROR) {
 			dev_err(&state->chip->i2c->dev, "%s: fe_stid135_reset_modcodes_filter error %d !\n", __func__, err);
 			vprintk("[%d]: fe_stid135_reset_modcodes_filter error %d !\n", state->nr+1, err);
 		}
+	} else {
+		state_dprintk("NOT resetting modcodes_filter\n");
 	}
 
 	err |= (error1 = fe_stid135_search(state, &search_params, 0));
@@ -1424,13 +1428,14 @@ static int stid135_set_parameters(struct neumo_dvb_frontend* fe)
 	vprintk("[%d] set_parameters: error=%d locked=%d\n", state->nr+1, err, state->signal_info.has_lock);
 
 	/* Set modcode after search */
-	if (p->modcode != MODCODE_ALL) {
-        u32 m = p->modcode;
+	if (p->modcod_filter != MODCODE_ALL) {
+        u32 m = p->modcod_filter;
         u32 j = 0;
 				u32 i;
 				struct fe_sat_dvbs2_mode_t modcode_mask[FE_SAT_MODCODE_UNKNOWN*4];
-        dev_dbg(&state->chip->i2c->dev, "%s: set Modcode mask %x!\n", __func__, p->modcode);
+        dev_dbg(&state->chip->i2c->dev, "%s: set Modcode mask %x!\n", __func__, p->modcod_filter);
         m >>= 1;
+				state_dprintk("XXXX modcode FILTER p->modcode=0x%x\n", p->modcod_filter);
         for (i=FE_SAT_QPSK_14; i < FE_SAT_MODCODE_UNKNOWN; i ++) {
             if (m & 1) {
                 dev_dbg(&state->chip->i2c->dev, "%s: Modcode %02x enabled!\n", __func__, i);
@@ -1683,7 +1688,7 @@ static int stid135_read_status_(struct neumo_dvb_frontend* fe, enum fe_status *s
 	}
 #endif
 
-	p->modcode = state->signal_info.modcode;
+	p->main_modcod = state->signal_info.modcode;
 	p->pls_mode = state->signal_info.pls_mode;
 	p->pls_code = state->signal_info.pls_code;
 	p->pilot = state->signal_info.pilots == FE_SAT_PILOTS_ON ? PILOT_ON : PILOT_OFF;

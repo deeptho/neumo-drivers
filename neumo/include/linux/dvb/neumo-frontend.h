@@ -661,8 +661,8 @@ enum fe_interleaving {
 
 #define DTV_STREAM_ID		42
 #define DTV_ISDBS_TS_ID_LEGACY	DTV_STREAM_ID
-#define DTV_DVBT2_PLP_ID_LEGACY	43
-
+#define DTV_DVBT2_PLP_ID_LEGACY	DTV_STREAM_ID
+#define DTV_MODCOD_FILTER		43
 #define DTV_ENUM_DELSYS		44
 
 /* ATSC-MH */
@@ -721,7 +721,7 @@ enum fe_interleaving {
 #define DTV_RF_INPUT 91
 #define DTV_SET_SEC_CONFIGURED 92
 #define DTV_OUTPUT_BBFRAMES 93 //ask frontend to send bbframes to demux
-#define DTV_MODCODE	94
+#define DTV_MAIN_MODCOD	94
 #define DTV_MODCOD_LIST	95 //retrieve list of present matypes and stream_ids
 #define DTV_PLS_MODE 96
 #define DTV_PLS_CODE 97
