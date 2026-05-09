@@ -19,3 +19,4 @@ modules.order
 build/
 neumo/dvb-core/neumo-version.c
 neumo/include/linux/dvb/neumo-frontend.h
+neumo/include/linux/dvb/neumo-dmx.h

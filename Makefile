@@ -136,4 +136,7 @@ clean:
 	              -name "*.mod.c" -o -name ".*.cmd" -o -name ".*.o.d" -o \
 	              -name "*.order" -o -name "*.dwo" -o -name "modules.order" -o \
 	              -name "Module.symvers" | xargs rm -f
+	@rm -f $(NEUMO_DIR)/neumo/include/linux/dvb/neumo-frontend.h
+	@rm -f $(NEUMO_DIR)/neumo/include/linux/dvb/neumo-dmx.h
+	@rm -f $(NEUMO_DIR)/dvb-core/neumo-version.c
 	@rm -rf .tmp_versions

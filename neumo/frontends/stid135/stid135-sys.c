@@ -500,16 +500,16 @@ static ssize_t stv_demod_show(struct kobject *kobj, struct kobj_attribute *attr,
 								 "nr=%d adapter_no=%d default_rf_in=%d selected_rf_in=%d\n",
 								 state->nr, adapter_no, state->fe.ops.info.default_rf_input, rf_in);
 	ret += sprintf(buf+ret,
-										"llr_in_use=%d\nfreq=%d\n",
-								 state->llr_in_use, state->tuner_frequency);
+										"llr_in_use=%d modcod_filter=%d\nfreq=%d\n",
+								 state->llr_in_use, state->modcode_filter, state->tuner_frequency);
 	struct fe_sat_signal_info *info = &state->signal_info;
 	ret += sprintf(buf+ret
 								 ,"lock=%d fec=%d demod=%d error=%d signal=%d carrier=%d viterbi=%d sync=%d timedout=%d timing=%d\n",
 								 info->has_lock,
 								 info->fec_locked, info->demod_locked, info->has_error, info->has_signal, info->has_carrier, info->has_viterbi,
 								 info->has_sync, info->has_timedout, info->has_timing_lock);
-	ret += sprintf(buf+ret,"freq=%d sym_rate=%d\n",
-								 info->frequency, info->symbol_rate);
+	ret += sprintf(buf+ret,"freq=%d sym_rate=%d modcode=%d\n",
+								 info->frequency, info->symbol_rate, info->modcode);
 	if (info->C_N>=0)
 		ret += sprintf(buf+ret,"power=-%d.%ddBm cnr=%d/%ddB ber=%d\n\n",
 									 (-info->power)/1000, (-info->power)%1000, info->C_N/10, info->C_N%10, info->ber);

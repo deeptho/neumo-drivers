@@ -815,16 +815,16 @@ struct neumo_dvb_frontend *gx1133_attach(const struct gx1133_config *cfg,
 	ret = i2c_mux_add_adapter(priv->muxc, 0, 0);
 #else
 	ret = i2c_mux_add_adapter(priv->muxc, 0, 0,0);
-#endif	
+#endif
 	if (ret)
 		goto err1;
-		
+
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 10, 0)
 	ret = i2c_mux_add_adapter(priv->muxc, 0, 1);
 #else
 	ret = i2c_mux_add_adapter(priv->muxc, 0, 1,0);
-#endif	
+#endif
 	if (ret)
 		goto err1;
 	priv->i2c_demod = priv->muxc->adapter[0];
@@ -1584,11 +1584,11 @@ static int gx1133_set_frontend(struct neumo_dvb_frontend *fe)
 
 				/* Setup MODCODE filtering */
 				gx1133_rd(priv,DVB_S2,GX1133_LDPC_PLS_CTRL,&temp);
-				if (c->modcode == MODCODE_ALL)
+				if (c->modcod_filter == MODCODE_ALL)
 					temp&=0xfe;
 				else
 				{
-					modcode = c->modcode;
+					modcode = c->modcod_filter;
 					for (i = 1; i < 29; i++)
 					{
 						modcode = modcode>>1;

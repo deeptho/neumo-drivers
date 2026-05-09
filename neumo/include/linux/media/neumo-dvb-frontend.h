@@ -757,7 +757,7 @@ struct neumo_dtv_frontend_properties {
 	u16			matype_val;
 	u16     matype_valid;
 
-	u32			modcode;
+	u32			main_modcod;
 
 		/*for returning constellation samples*/
 
@@ -767,6 +767,7 @@ struct neumo_dtv_frontend_properties {
 			Maybe the following ones need clearing as well.
 		 */
 	/* statistics data */
+	u32 modcod_filter;
 	struct dtv_fe_stats	strength;
 	struct dtv_fe_stats	cnr;
 	struct dtv_fe_stats	pre_bit_error;

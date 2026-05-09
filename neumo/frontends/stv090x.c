@@ -3552,8 +3552,8 @@ static enum neumo_dvbfe_search stv090x_search(struct neumo_dvb_frontend *fe)
 	      stv090x_set_pls(state, 1, props->scrambling_sequence_index);
 
 	if (stv090x_algo(state) == STV090x_RANGEOK) {
-		if (props->delivery_system == SYS_DVBS2 && props->modcode != MODCODE_ALL)
-			stv090x_set_modcode(state, props->modcode);
+		if (props->delivery_system == SYS_DVBS2 && props->modcod_filter != MODCODE_ALL)
+			stv090x_set_modcode(state, props->modcod_filter);
 		dprintk(FE_DEBUG, 1, "Search success!");
 		return DVBFE_ALGO_SEARCH_SUCCESS;
 	} else {
@@ -5232,10 +5232,10 @@ static void stv090x_remove(struct i2c_client *client)
 	struct stv090x_state *state = i2c_get_clientdata(client);
 
 	stv090x_release(&state->frontend);
-	
+
 #if LINUX_VERSION_CODE < KERNEL_VERSION(6,1,0)
 	return 0;
-#endif	
+#endif
 }
 
 struct neumo_dvb_frontend *stv090x_attach(struct stv090x_config *config,

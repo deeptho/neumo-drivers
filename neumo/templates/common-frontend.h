@@ -661,7 +661,8 @@ enum common_fe_interleaving {
 
 #define COMMON_DTV_STREAM_ID		42
 #define COMMON_DTV_ISDBS_TS_ID_LEGACY	COMMON_DTV_STREAM_ID
-#define COMMON_DTV_DVBT2_PLP_ID_LEGACY	43
+#define COMMON_DTV_DVBT2_PLP_ID_LEGACY COMMON_DTV_STREAM_ID
+#define COMMON_DTV_MODCOD_FILTER		43
 
 #define COMMON_DTV_ENUM_DELSYS		44
 
@@ -721,8 +722,11 @@ enum common_fe_interleaving {
 #define NEUMO_DTV_RF_INPUT 91
 #define NEUMO_DTV_SET_SEC_CONFIGURED 92
 #define NEUMO_DTV_OUTPUT_BBFRAMES 93 //ask frontend to send bbframes to demux
-#define NEUMO_DTV_MODCODE		94
-#define DTV_MAX_COMMAND	 DTV_MODCODE
+#define NEUMO_DTV_MAIN_MODCOD		94
+#define NEUMO_DTV_MODCOD_LIST	95 //retrieve list of present matypes and stream_ids
+#define NEUMO_DTV_PLS_MODE 96
+#define NEUMO_DTV_PLS_CODE 97
+#define NEUMO_DTV_MAX_COMMAND	DTV_PLS_CODE //retrieve list of present modcodes
 
 //commands for controlling long running algorithms via COMMON_FE_ALGO_CTRL ioctl
 #define COMMON_DTV_STOP 1
@@ -1121,6 +1125,18 @@ struct neumo_dtv_matype_list {
 	__u16* matypes;
 };
 
+struct neumo_dtv_modcod_entry {
+	__u8 modcod;
+	__u8 reserved;
+	__u16 frac; // fraction of frames in which this modcod occurs
+};
+
+
+struct neumo_dtv_modcod_list {
+	struct dtv_modcod_entry* entries;
+	__u32 num_entries;
+};
+
 /**
  * struct dvb_api_dtv_property - store one of frontend command and its value
  *
@@ -1181,6 +1197,7 @@ struct neumo_dtv_property {
 		struct neumo_dtv_fe_spectrum spectrum;
 		struct neumo_dtv_fe_constellation constellation;
 		struct neumo_dtv_matype_list matype_list;
+		struct neumo_dtv_modcod_list modcod_list;
 		struct neumo_dtv_pls_search_list pls_search_codes;
 		struct {
 			__u8 data[32];
@@ -1318,7 +1335,7 @@ struct common_dvb_select_api {
 #define NEUMO_FE_ALGO_CTRL		       _IOW('o', 184, struct neumo_dtv_algo_ctrl)
 #define NEUMO_FE_SET_RF_INPUT		   _IOW('o', 185, struct neumo_fe_rf_input_control)
 #define NEUMO_FE_GET_EXTENDED_INFO	 _IOR('o', 186, struct neumo_dvb_frontend_extended_info)
-#define NEUMO_FE_DISEQC_SEND_LONG_MASTER_CMD  _IOW('o', 87, struct neumo_dvb_diseqc_long_master_cmd)
+#define NEUMO_FE_DISEQC_SEND_LONG_MASTER_CMD  _IOW('o', 187, struct neumo_dvb_diseqc_long_master_cmd)
 
 #if defined(__DVB_CORE__) || !defined(__KERNEL__)
 
