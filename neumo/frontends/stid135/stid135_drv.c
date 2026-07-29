@@ -5835,30 +5835,6 @@ fe_lla_error_t fe_stid135_manage_matype_info(struct stv* state)
 			}
 			/* If TS/GS = 10 (GSE-HEM High Efficiency Mode) reset matype force bit, load frames in MPEG packets and disable latency regulation */
 				else if(((genuine_matype>>6) & 0x3) == 0x2){ //GSE-HEM
-#ifdef USER1 //code not used
-				/* Force HEM mode */
-					error |= ChipSetField(state->chip->ip.handle_demod, FLD_FC8CODEW_DVBSX_PKTDELIN_PDELCTRL0_HEMMODE_SELECT(Demod), 3);
-					error |= ChipSetField(state->chip->ip.handle_demod, FLD_FC8CODEW_DVBSX_HWARE_TSCFG1_TSFIFO_MANSPEED(Demod), 3);
-					error |= ChipSetField(state->chip->ip.handle_demod, FLD_FC8CODEW_DVBSX_HWARE_TSCFG0_TSFIFO_EMBINDVB(Demod), 1); // - new management of NCR
-					/* Adjust TSSPEED according to channel maximum bit rate for the demodulator */
-					error |= ChipGetField(state->chip->ip.handle_demod, FLD_FC8CODEW_DVBSX_DEMOD_HDEBITCFG0_SDEMAP_MAXLLRRATE(Demod), &fld_value);
-					if(fld_value == 0x00) {
-						error |= ChipSetOneRegister(state->chip->ip.handle_demod, (u16)REG_RC8CODEW_DVBSX_HWARE_TSSPEED(Demod), 0x10); // - new management of NCR
-					} else {
-						error |= ChipSetOneRegister(state->chip->ip.handle_demod, (u16)REG_RC8CODEW_DVBSX_HWARE_TSSPEED(Demod), 0x16); // - new management of NCR
-					}
-					error |= ChipSetField(state->chip->ip.handle_demod, FLD_FC8CODEW_DVBSX_HWARE_TSSTATE1_TSOUT_NOSYNC(Demod), 0);
-					/* To avoid reset of stream merger in annexM, ACM or if PID filter is enabled, set pragmatic smoothing mode for computation of TS bit rate */
-					matype_info &= 0x0F;
-					/* Set bit 5 to ignore ISI/MIS bit because not compatible with NCR feature (latency regulation) */
-					matype_info |= 0xB0;
-					error |= ChipSetOneRegister(state->chip->ip.handle_demod, (u16)REG_RC8CODEW_DVBSX_PKTDELIN_MATCST1(Demod), matype_info);
-					error |= ChipSetField(state->chip->ip.handle_demod, FLD_FC8CODEW_DVBSX_PKTDELIN_BBHCTRL2_FORCE_MATYPEMSB(Demod), 1);
-					state_dprintk("force_matypemsb set to 1");
-					error |= ChipSetField(state->chip->ip.handle_demod, FLD_FC8CODEW_DVBSX_HWARE_TSCFG0_TSFIFO_BITSPEED(Demod), 1);
-					error |= ChipSetOneRegister(state->chip->ip.handle_demod, (u16)REG_RC8CODEW_DVBSX_HWARE_TSBITRATE1(Demod), 0x80);
-					error |= ChipSetOneRegister(state->chip->ip.handle_demod, (u16)REG_RC8CODEW_DVBSX_HWARE_TSBITRATE0(Demod), 0x00);
-#else
 #ifdef  ENABLE_BBFRAME_FOR_GSE
 					error |= ChipSetField(state->chip->ip.handle_demod, FLD_FC8CODEW_DVBSX_PKTDELIN_PDELCTRL2_FORCE_CONTINUOUS(Demod), 1);
 					error |= ChipSetField(state->chip->ip.handle_demod, FLD_FC8CODEW_DVBSX_PKTDELIN_PDELCTRL2_FRAME_MODE(Demod), 1);
@@ -5887,34 +5863,9 @@ fe_lla_error_t fe_stid135_manage_matype_info(struct stv* state)
 					error |= (error1=ChipSetField(state->chip->ip.handle_demod, FLD_FC8CODEW_DVBSX_PKTDELIN_PDELCTRL0_HEMMODE_SELECT(Demod), 0));
 					if(error1)
 						dprintk("demod=%d: error=%d\n", state->nr, error1);
-#endif
 			}
 			/* If TS/GS = 00 (Generic packetized) or 01 (Generic continuous) force matype/tsgs = 10 and load frames in MPEG packets */
 			else if((((genuine_matype>>6) & 0x3) == 0x0) || ((genuine_matype>>6) & 0x3) == 0x1) {
-#ifdef USER1 //code not used
-					/* Force HEM mode */
-					error |= ChipSetField(state->chip->ip.handle_demod, FLD_FC8CODEW_DVBSX_PKTDELIN_PDELCTRL0_HEMMODE_SELECT(Demod), 3);
-					error |= ChipSetField(state->chip->ip.handle_demod, FLD_FC8CODEW_DVBSX_HWARE_TSCFG1_TSFIFO_MANSPEED(Demod), 3);
-					error |= ChipSetField(state->chip->ip.handle_demod, FLD_FC8CODEW_DVBSX_HWARE_TSCFG0_TSFIFO_EMBINDVB(Demod), 1); // - new management of NCR
-					/* Adjust TSSPEED according to channel maximum bit rate for the demodulator */
-					error |= ChipGetField(state->chip->ip.handle_demod, FLD_FC8CODEW_DVBSX_DEMOD_HDEBITCFG0_SDEMAP_MAXLLRRATE(Demod), &fld_value);
-					if(fld_value == 0x00) {
-						error |= ChipSetOneRegister(state->chip->ip.handle_demod, (u16)REG_RC8CODEW_DVBSX_HWARE_TSSPEED(Demod), 0x10); // - new management of NCR
-					} else {
-						error |= ChipSetOneRegister(state->chip->ip.handle_demod, (u16)REG_RC8CODEW_DVBSX_HWARE_TSSPEED(Demod), 0x16); // - new management of NCR
-					}
-					error |= ChipSetField(state->chip->ip.handle_demod, FLD_FC8CODEW_DVBSX_HWARE_TSSTATE1_TSOUT_NOSYNC(Demod), 0);
-					/* To avoid reset of stream merger in annexM, ACM or if PID filter is enabled, set pragmatic smoothing mode for computation of TS bit rate */
-					matype_info &= 0x0F;
-					/* Set bit 5 to ignore ISI/MIS bit because not compatible with NCR feature (latency regulation) */
-					matype_info |= 0xB0;
-					error |= ChipSetOneRegister(state->chip->ip.handle_demod, (u16)REG_RC8CODEW_DVBSX_PKTDELIN_MATCST1(Demod), matype_info);
-					error |= ChipSetField(state->chip->ip.handle_demod, FLD_FC8CODEW_DVBSX_PKTDELIN_BBHCTRL2_FORCE_MATYPEMSB(Demod), 1);
-					state_dprintk("force_matypemsb set to 1");
-					error |= ChipSetField(state->chip->ip.handle_demod, FLD_FC8CODEW_DVBSX_HWARE_TSCFG0_TSFIFO_BITSPEED(Demod), 1);
-					error |= ChipSetOneRegister(state->chip->ip.handle_demod, (u16)REG_RC8CODEW_DVBSX_HWARE_TSBITRATE1(Demod), 0x80);
-					error |= ChipSetOneRegister(state->chip->ip.handle_demod, (u16)REG_RC8CODEW_DVBSX_HWARE_TSBITRATE0(Demod), 0x00);
-#else
 #ifdef ENABLE_BBFRAME_FOR_GSE
 					error |= ChipSetField(state->chip->ip.handle_demod, FLD_FC8CODEW_DVBSX_PKTDELIN_PDELCTRL2_FORCE_CONTINUOUS(Demod), 1);
 					error |= ChipSetField(state->chip->ip.handle_demod, FLD_FC8CODEW_DVBSX_PKTDELIN_PDELCTRL2_FRAME_MODE(Demod), 1);
@@ -5953,7 +5904,6 @@ fe_lla_error_t fe_stid135_manage_matype_info(struct stv* state)
 					if(error1)
 						dprintk("demod=%d: error=%d\n", state->nr, error1);
 					/* To avoid reset of stream merger in annexM, ACM or if PID filter is enabled, set pragmatic smoothing mode for computation of TS bit rate */
-#endif
 			}
 			/* WB, and MIS mode */
 			if ((state->demod_symbol_rate > state->chip->ip.master_clock) && mis) {
