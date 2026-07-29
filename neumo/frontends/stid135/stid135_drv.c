@@ -10620,6 +10620,9 @@ fe_lla_error_t fe_stid135_isi_and_modcod_scan(struct stv* state, bool scan_isi, 
 		// Go back to previous value of test mode
 		error |= ChipSetField(state->chip->ip.handle_demod, FLD_FC8CODEW_DVBSX_PKTDELIN_TPKTDELIN_TESTBUS_SELECT(demod), 0);
 	}
+
+		dprintk("isi_and_modcod scan; num_matypes=%d\n", p_isi_struct->num_matypes);
+
 	return error;
 }
 
