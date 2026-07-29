@@ -122,7 +122,7 @@ static int si2168_read_status(struct neumo_dvb_frontend *fe, enum fe_status *sta
 	int ret, i;
 	unsigned int utmp, utmp1, utmp2;
 	struct si2168_cmd cmd;
-	fe_dprintk(fe,"called\n");
+	//fe_dprintk(fe,"called\n");
 	*status = 0;
 
 	if (!dev->active) {

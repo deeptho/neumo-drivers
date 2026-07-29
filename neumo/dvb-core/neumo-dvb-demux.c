@@ -24,7 +24,7 @@
 #include <media/neumo-dvb-demux-private.h>
 
 int dvb_demux_tscheck=0;
-int dvb_demux_dtdebug=1;
+int dvb_demux_dtdebug=0;
 int dvb_demux_speedcheck;
 int dvb_demux_feed_err_pkts = 1;
 

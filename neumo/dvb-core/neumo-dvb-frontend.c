@@ -2745,7 +2745,9 @@ static int dvb_frontend_do_ioctl(struct file *file, unsigned int cmd, void *parg
 	struct neumo_dvb_frontend* fe = dvbdev->priv;
 	struct neumo_dvb_frontend_private* fepriv = fe->frontend_priv;
 	//dprintk("fepriv=%p\n", fepriv);
+#if 0
 	fe_dprintk(fe, "%s: (%d)\n", __func__, _IOC_NR(cmd));
+#endif
 	if((file->f_flags & O_ACCMODE) != O_RDONLY)  {
 		if(cmd == DTV_STOP) {
 			static struct dtv_algo_ctrl algo_ctrl = {.cmd= DTV_STOP};

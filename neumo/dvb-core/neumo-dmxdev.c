@@ -25,7 +25,7 @@
 #include <media/neumo-dmxdev-sysfs.h>
 
 static int debug;
-int dtdebug=1;
+int dtdebug=0;
 
 module_param(debug, int, 0644);
 MODULE_PARM_DESC(debug, "Turn on/off debugging (default:off).");
