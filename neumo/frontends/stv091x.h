@@ -154,7 +154,7 @@ struct stv_signal_info {
 	s32				band_power;	/* Power of the whole freq range signal (dBm x1000)	*/
 	s32				C_N;		/* Carrier to noise ratio (dB x10)			*/
 	u32				ber;		/* Bit error rate	(x10^7)				*/
-	u8				matype;
+	u16				matype;
 	u8 				isi;		/* Current value of ISI 				*/
 	u8        pls_mode;
 	u32       pls_code;
