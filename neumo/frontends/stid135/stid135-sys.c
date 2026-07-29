@@ -500,7 +500,7 @@ static ssize_t stv_demod_show(struct kobject *kobj, struct kobj_attribute *attr,
 								 "nr=%d adapter_no=%d default_rf_in=%d selected_rf_in=%d\n",
 								 state->nr, adapter_no, state->fe.ops.info.default_rf_input, rf_in);
 	ret += sprintf(buf+ret,
-										"llr_in_use=%d modcod_filter=%d\nfreq=%d\n",
+										"llr_in_use=%d modcod_filter=%d tuner_freq=%d\n",
 								 state->llr_in_use, state->modcode_filter, state->tuner_frequency);
 	struct fe_sat_signal_info *info = &state->signal_info;
 	ret += sprintf(buf+ret
@@ -510,6 +510,42 @@ static ssize_t stv_demod_show(struct kobject *kobj, struct kobj_attribute *attr,
 								 info->has_sync, info->has_timedout, info->has_timing_lock);
 	ret += sprintf(buf+ret,"freq=%d sym_rate=%d modcode=%d\n",
 								 info->frequency, info->symbol_rate, info->modcode);
+	int tot = state->signal_info.modcod_list.totcount;
+	bool is_start = true;
+	const int num_modcods = sizeof(state->signal_info.modcod_list.count)/sizeof(state->signal_info.modcod_list.count[0]);
+	if(num_modcods >0) {
+		ret += sprintf(buf+ret,"modcods:");
+		for(int i=0 ; i < num_modcods; ++i) {
+			int count =  state->signal_info.modcod_list.count[i];
+			if(count >0) {
+				int frac = (count * 1000 + 499) / tot;
+				if(frac >=1) {
+					if(is_start)
+						ret += sprintf(buf+ret," %d (%d%%)", i, frac);
+					else
+						ret += sprintf(buf+ret,"; %d (%d%%)", i, frac);
+					is_start = false;
+				}
+			}
+		}
+		ret += sprintf(buf+ret,"\n");
+	}
+	const int num_matypes = state->signal_info.isi_list.num_matypes;
+	if(num_matypes >0) {
+		ret += sprintf(buf+ret,"\nisi-matype:");
+		is_start = false;
+		for(int i=0 ; i < num_matypes; ++i) {
+			int matype = state->signal_info.isi_list.matypes[i];
+			int isi =  matype & 0xff;
+			matype = (matype >> 8);
+			if(is_start)
+				ret += sprintf(buf+ret," %d:%d", isi, matype);
+			else
+				ret += sprintf(buf+ret,"; %d:%d", isi, matype);
+			is_start = false;
+		}
+		ret += sprintf(buf+ret,"\n");
+	}
 	if (info->C_N>=0)
 		ret += sprintf(buf+ret,"power=-%d.%ddBm cnr=%d/%ddB ber=%d\n\n",
 									 (-info->power)/1000, (-info->power)%1000, info->C_N/10, info->C_N%10, info->ber);
