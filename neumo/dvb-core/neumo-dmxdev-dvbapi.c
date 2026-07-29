@@ -169,6 +169,9 @@ static int dvb_dvr_open(struct inode *inode, struct file *file)
 		dvb_ringbuffer_init(&dmxdev->dvr_buffer, mem, DVR_BUFFER_SIZE);
 		if (dmxdev->may_do_mmap)
 			dvb_vb2_init(&dmxdev->dvr_vb2_ctx, "dvr",
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(7, 1, 0))
+									 &dmxdev->mutex,
+#endif
 				     file->f_flags & O_NONBLOCK);
 		dvbdev->readers--;
 	}
@@ -836,7 +839,10 @@ static int dvb_demux_open(struct inode *inode, struct file *file)
 
 	dvb_ringbuffer_init(&dmxdevfilter->buffer, NULL, 8192);
 	dvb_vb2_init(&dmxdevfilter->vb2_ctx, "demux_filter",
-		     file->f_flags & O_NONBLOCK);
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(7, 1, 0))
+							 &dmxdev->mutex,
+#endif
+							 file->f_flags & O_NONBLOCK);
 	dmxdevfilter->type = DMXDEV_TYPE_NONE;
 	dvb_dmxdev_filter_state_set(dmxdevfilter, DMXDEV_STATE_ALLOCATED);
 	timer_setup(&dmxdevfilter->timer, dvb_dmxdev_filter_timeout, 0);
