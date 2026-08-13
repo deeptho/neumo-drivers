@@ -1038,7 +1038,7 @@ static const uint8_t* bbf_output_ts_bytes(struct neumo_dvb_demux* demux,
 		ts->buff_idx += num_bytes_to_output;
 		num_ts_bytes -= n;
 		if(ts->buff_idx > bbf->upl) {
-			dmx_demux_dprintk_nice(bbf, "implementation error: ts->buff_idx=%d bbf->upl=%d\n",
+			dmx_demux_dprintk_nice(bbf, "stream error: ts->buff_idx=%d bbf->upl=%d\n",
 														 ts->buff_idx, bbf->upl);
 			ts->buff_idx = bbf->upl;
 			if(ts->buff_idx >= sizeof(ts->buff)) {
@@ -2944,34 +2944,55 @@ int dvb_demux_set_bbframes_state(struct neumo_dvb_demux* demux, bool embedding_i
 
 int dvb_demux_get_matypes(struct neumo_dvb_demux* demux, int32_t (*isi_bitset)[8], int32_t (*high_rolloff_mode)[8], uint8_t (*matypes)[256])
 {
+	if (!demux || !isi_bitset || !high_rolloff_mode || !matypes)
+		return -EINVAL;
+
 	if(mutex_lock_interruptible(&demux->mutex))
 		return -ERESTARTSYS;
-	int num_streams=0;
-	//WARN_ON(!demux->fe_bbframes_stream);
-	if(demux->fe_bbframes_stream) {
-		struct embedded_stream*  emb = demux->fe_bbframes_stream->parent_embedded_stream;
-		if(emb) {
-				memcpy(&isi_bitset[0], &emb->isi_plp_bitset[0], sizeof(int32_t)*8);
-				memcpy(&high_rolloff_mode[0], &emb->high_rolloff_mode[0], sizeof(int32_t)*8);
-				memcpy(&matypes[0], &emb->matypes[0], sizeof(int8_t)*256);
-				num_streams = emb->num_streams;
+
+
+	int num_streams = 0;
+	if (demux->fe_bbframes_stream) {
+		struct embedded_stream* emb = demux->fe_bbframes_stream->parent_embedded_stream;
+
+		if (emb) {
+			memcpy(&isi_bitset[0], &emb->isi_plp_bitset[0], sizeof(int32_t) * 8);
+			memcpy(&high_rolloff_mode[0], &emb->high_rolloff_mode[0], sizeof(int32_t) * 8);
+			memcpy(&matypes[0], &emb->matypes[0], sizeof(uint8_t) * 256);
+			num_streams = emb->num_streams;
 		}
 	}
 	mutex_unlock(&demux->mutex);
-	if(num_streams>0) {
-		char* buf = kzalloc(8192, GFP_KERNEL);
-		int ret=0;
-		int indent=0;
-		ret += sprintf(buf+ret, "%*sISI/PLP:matype: ", indent, " ");
+
+	if (num_streams > 0) {
+		const size_t buf_size = 8192;
+		char* buf = kzalloc(buf_size, GFP_KERNEL);
+		if (!buf)
+			return -ENOMEM;
+
+		int ret = 0;
+		int indent = 0;
+		ret += snprintf(buf + ret, buf_size - ret, "%*sISI/PLP:matype: ", indent, " ");
+
 		int isi;
-		for(isi=0; isi <256;++isi) {
-			if(!(((*isi_bitset)[(isi>>5)&0x7] >> (isi&31))&1))
+		for (isi = 0; isi < 256; ++isi) {
+			// Early termination check if string buffer fills up completely
+			if (ret >= buf_size - 1)
+				break;
+
+			int idx = (isi >> 5) & 0x7;
+			if (!(((*isi_bitset)[idx] >> (isi & 31)) & 1))
 				continue;
-			ret += sprintf(buf+ret, " %d:0x%x", isi, (*matypes)[isi]);
-			if(((*high_rolloff_mode)[(isi>>5)&0x7] >> (isi&31))&1)
-				ret += sprintf(buf+ret, " +");
+
+			ret += snprintf(buf + ret, buf_size - ret, " %d:0x%x", isi, (*matypes)[isi]);
+
+			if (ret < buf_size - 1 && (((*high_rolloff_mode)[idx] >> (isi & 31)) & 1))
+				ret += snprintf(buf + ret, buf_size - ret, " +");
 		}
-		ret += sprintf(buf+ret, "\n");
+
+		if (ret < buf_size - 1)
+			ret += snprintf(buf + ret, buf_size - ret, "\n");
+
 		dprintk("%s", buf);
 		kfree(buf);
 	}
