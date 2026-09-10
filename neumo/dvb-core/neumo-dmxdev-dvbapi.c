@@ -463,7 +463,7 @@ static int dvb_dmxdev_ts_callback(const u8 *buffer1, size_t buffer1_len,
 	}
 
 	if (dvb_vb2_is_streaming(ctx)) {
-#if LINUX_VERSION_CODE <- KERNEL_VERSION(6,18,15)
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(6,18,15)
 		ret = dvb_vb2_fill_buffer(ctx, buffer1, buffer1_len,
 					  buffer_flags);
 		if (ret == buffer1_len)
