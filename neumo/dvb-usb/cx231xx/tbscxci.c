@@ -42,7 +42,9 @@ static int tbscxci_i2c_write(struct tbscxci_state *state,
 	u8 addr, u8 data[], int len)
 {
 	int ret;
-	unsigned char buf[len + 1];
+	if(len +1 >= 16)
+		len = 15;
+	unsigned char buf[16];
 
 	struct i2c_msg msg = { .addr = TBSCXCI_I2C_ADDR, .flags = 0,
 			.buf = &buf[0], .len = len + 1 };
