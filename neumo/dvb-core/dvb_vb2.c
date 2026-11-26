@@ -102,7 +102,7 @@ static void _stop_streaming(struct vb2_queue *vq)
 	spin_unlock_irqrestore(&ctx->slock, flags);
 }
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(7, 1, 0))
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(7, 0, 0))
 static void _dmxdev_lock(struct vb2_queue *vq)
 {
 	struct dvb_vb2_ctx *ctx = vb2_get_drv_priv(vq);
@@ -112,7 +112,7 @@ static void _dmxdev_lock(struct vb2_queue *vq)
 }
 #endif
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(7, 1, 0))
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(7, 0, 0))
 static void _dmxdev_unlock(struct vb2_queue *vq)
 {
 	struct dvb_vb2_ctx *ctx = vb2_get_drv_priv(vq);
@@ -129,7 +129,7 @@ static const struct vb2_ops dvb_vb2_qops = {
 	.buf_queue		= _buffer_queue,
 	.start_streaming	= _start_streaming,
 	.stop_streaming		= _stop_streaming,
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(7, 1, 0))
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(7, 0, 0))
 	.wait_prepare		= _dmxdev_unlock,
 	.wait_finish		= _dmxdev_lock,
 #endif
